@@ -3,10 +3,14 @@
 // the WPILib BSD license file in the root directory of this project.
 
 #include "Robot.h"
-
+#include <cmath>
 #include <fmt/core.h>
 
 #include <frc/smartdashboard/SmartDashboard.h>
+
+static const int INVERT_LEFT = 1;
+static const int INVERT_RIGHT = 1;
+static const double JOYSTICK_THRESH = 0.05;
 
 void Robot::RobotInit() {
   m_chooser.SetDefaultOption(kAutoNameDefault, kAutoNameDefault);
@@ -58,7 +62,15 @@ void Robot::AutonomousPeriodic() {
 
 void Robot::TeleopInit() {}
 
-void Robot::TeleopPeriodic() {}
+void Robot::TeleopPeriodic() {
+  joystickX = rJoy.GetX();
+  joystickY = rJoy.GetY();
+
+  if(abs(joystickX) < JOYSTICK_THRESH) joystickX = 0;
+  if(abs(joystickY) < JOYSTICK_THRESH) joystickY = 0;
+
+  drive.ArcadeDrive(joystickY, joystickX); // Squared inputs true by default
+}
 
 void Robot::DisabledInit() {}
 

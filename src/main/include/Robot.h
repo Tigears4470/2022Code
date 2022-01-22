@@ -7,7 +7,16 @@
 #include <string>
 
 #include <frc/TimedRobot.h>
+#include <frc/Joystick.h>
 #include <frc/smartdashboard/SendableChooser.h>
+
+#include <frc/motorcontrol/PWMVictorSPX.h>
+#include <frc/motorcontrol/MotorController.h>
+#include <frc/drive/DifferentialDrive.h>
+#include <frc/motorcontrol/MotorControllerGroup.h>
+
+using namespace frc;
+using namespace std;
 
 class Robot : public frc::TimedRobot {
  public:
@@ -23,8 +32,27 @@ class Robot : public frc::TimedRobot {
   void TestPeriodic() override;
 
  private:
-  frc::SendableChooser<std::string> m_chooser;
+  SendableChooser<std::string> m_chooser;
   const std::string kAutoNameDefault = "Default";
   const std::string kAutoNameCustom = "My Auto";
-  std::string m_autoSelected;
+  string m_autoSelected;
+
+  // Controls
+  Joystick rJoy = Joystick(0);
+
+  // Components
+
+  // DriveTrain
+  frc::PWMVictorSPX frontLeft{1};
+  frc::PWMVictorSPX rearLeft{2};
+  frc::MotorControllerGroup left{frontLeft, rearLeft};
+
+  frc::PWMVictorSPX frontRight{3};
+  frc::PWMVictorSPX rearRight{4};
+  frc::MotorControllerGroup right{frontRight, rearRight};
+
+  frc::DifferentialDrive drive {left, right};
+  // Values
+  double joystickX;
+  double joystickY;
 };
