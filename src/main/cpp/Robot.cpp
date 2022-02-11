@@ -60,21 +60,49 @@ void Robot::AutonomousPeriodic() {
   }
 }
 
-void Robot::TeleopInit() {}
+void Robot::TeleopInit() {
+  //forces the CANSparkMax motors to stop and await orders
+  rearLeft.StopMotor();
+  frontLeft.StopMotor();
+  rearRight.StopMotor();
+  frontRight.StopMotor();
+
+  //links the back motors to the front motors in movement terms
+  rearLeft.Follow(frontLeft);
+  rearRight.Follow(frontRight);
+}
 
 void Robot::TeleopPeriodic() {
-  joystickX = rJoy.GetX();
-  joystickY = rJoy.GetY();
+  if(check)ArcDrv();else TankDrv();
+  if(lJoy->GetRawButtonPressed(11))check = !check;
+}
+
+void Robot::ArcDrv(){
+  joystickX = lJoy->GetX();
+  joystickY = lJoy->GetY();
+  
+  if(abs(joystickX) < JOYSTICK_THRESH) joystickX = 0;
+  if(abs(joystickY) < JOYSTICK_THRESH) joystickY = 0;
+
+  drive.ArcadeDrive(-1*joystickX, joystickY); // Squared inputs true by default
+}
+void Robot::TankDrv(){
+  joystickX = lJoy->GetY();
+  joystickY = rJoy->GetY();
 
   if(abs(joystickX) < JOYSTICK_THRESH) joystickX = 0;
   if(abs(joystickY) < JOYSTICK_THRESH) joystickY = 0;
 
-  drive.ArcadeDrive(joystickY, joystickX); // Squared inputs true by default
+  drive.TankDrive(-1*joystickX, joystickY); // Squared inputs true by defaul
 }
 
-void Robot::DisabledInit() {}
+void Robot::DisabledInit() {
+  drive.StopMotor();
+}
 
-void Robot::DisabledPeriodic() {}
+void Robot::DisabledPeriodic() {
+  drive.StopMotor();
+}
 
 void Robot::TestInit() {}
 
