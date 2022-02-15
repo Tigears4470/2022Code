@@ -37,6 +37,7 @@ class Robot : public frc::TimedRobot {
   void TestPeriodic() override;
   void ArcDrv();
   void TankDrv();
+  void FireButtons();
 
  private:
   SendableChooser<std::string> m_chooser;
@@ -61,9 +62,13 @@ class Robot : public frc::TimedRobot {
 
   DifferentialDrive drive {frontLeft, frontRight};
 
+  //Firing Motors
+  rev::CANSparkMax fireMotor{5, rev::CANSparkMax::MotorType::kBrushed};
+  map<int, float> firingValues;
+
   // Values
   //https://software-metadata.revrobotics.com/REVLib.json
   double joystickX;
   double joystickY;
-  bool check = true;
+  bool typeOfDrive = true;
 };

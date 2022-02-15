@@ -70,11 +70,24 @@ void Robot::TeleopInit() {
   //links the back motors to the front motors in movement terms
   rearLeft.Follow(frontLeft);
   rearRight.Follow(frontRight);
+
+  //meant to set he values for the mapping of the firing mechanism
+  firingValues.insert(pair<int, float>(2,75));
+  firingValues.insert(pair<int, float>(3,100));
+  firingValues.insert(pair<int, float>(4,25));
+  firingValues.insert(pair<int, float>(5,50));
 }
 
 void Robot::TeleopPeriodic() {
-  if(check)ArcDrv();else TankDrv();
-  if(lJoy->GetRawButtonPressed(11))check = !check;
+  if(typeOfDrive)ArcDrv();else TankDrv();
+  if(lJoy->GetRawButtonPressed(11))typeOfDrive = !typeOfDrive;
+  FireButtons();
+}
+
+//checks the buttons to see the rate of fire
+void Robot::FireButtons(){
+  for(int i = 2; i<=5; i++)
+    if(rJoy->GetRawButtonPressed(i)) fireMotor.Set(firingValues.at(i));
 }
 
 void Robot::ArcDrv(){
@@ -84,7 +97,7 @@ void Robot::ArcDrv(){
   if(abs(joystickX) < JOYSTICK_THRESH) joystickX = 0;
   if(abs(joystickY) < JOYSTICK_THRESH) joystickY = 0;
 
-  drive.ArcadeDrive(-1*joystickX, joystickY); // Squared inputs true by default
+  drive.ArcadeDrive(-1*joystickX/1.5, joystickY/1.5); // Squared inputs true by default
 }
 void Robot::TankDrv(){
   joystickX = lJoy->GetY();
@@ -93,7 +106,7 @@ void Robot::TankDrv(){
   if(abs(joystickX) < JOYSTICK_THRESH) joystickX = 0;
   if(abs(joystickY) < JOYSTICK_THRESH) joystickY = 0;
 
-  drive.TankDrive(-1*joystickX, joystickY); // Squared inputs true by defaul
+  drive.TankDrive(joystickX/1.5, -1*joystickY/1.5); // Squared inputs true by default
 }
 
 void Robot::DisabledInit() {
