@@ -38,6 +38,7 @@ class Robot : public frc::TimedRobot {
   void ArcDrv();
   void TankDrv();
   void FireButtons();
+  void ControlArm();
 
  private:
   SendableChooser<std::string> m_chooser;
@@ -58,7 +59,7 @@ class Robot : public frc::TimedRobot {
 
   rev::CANSparkMax frontRight{3, rev::CANSparkMax::MotorType::kBrushed};
   rev::CANSparkMax rearRight{4, rev::CANSparkMax::MotorType::kBrushed};
-  
+
 
   DifferentialDrive drive {frontLeft, frontRight};
 
@@ -66,9 +67,15 @@ class Robot : public frc::TimedRobot {
   rev::CANSparkMax fireMotor{5, rev::CANSparkMax::MotorType::kBrushed};
   map<int, float> firingValues;
 
+  //Arm Motor(s)
+  rev::CANSparkMax armMotor{6, rev::CANSparkMax::MotorType::kBrushed};
+
   // Values
   //https://software-metadata.revrobotics.com/REVLib.json
   double joystickX;
   double joystickY;
+  float joystickArm;
+  float currentDistance;
   bool typeOfDrive = true;
+  bool armEngage = false;
 };

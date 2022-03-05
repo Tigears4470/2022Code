@@ -71,23 +71,48 @@ void Robot::TeleopInit() {
   rearLeft.Follow(frontLeft);
   rearRight.Follow(frontRight);
 
+  
+
+  //frontRight.GetForwardLimitSwitch()
+
   //meant to set he values for the mapping of the firing mechanism
-  firingValues.insert(pair<int, float>(2,75));
-  firingValues.insert(pair<int, float>(3,100));
-  firingValues.insert(pair<int, float>(4,25));
-  firingValues.insert(pair<int, float>(5,50));
+  firingValues.insert(pair<int, float>(2, 0.75));
+  firingValues.insert(pair<int, float>(3, 1.00));
+  firingValues.insert(pair<int, float>(4, 0.25));
+  firingValues.insert(pair<int, float>(5, 0.50));
 }
 
 void Robot::TeleopPeriodic() {
   if(typeOfDrive)ArcDrv();else TankDrv();
   if(lJoy->GetRawButtonPressed(11))typeOfDrive = !typeOfDrive;
   FireButtons();
+  if(lJoy->GetRawButtonPressed(7)) ControlArm();
 }
 
 //checks the buttons to see the rate of fire
 void Robot::FireButtons(){
   for(int i = 2; i<=5; i++)
-    if(rJoy->GetRawButtonPressed(i)) fireMotor.Set(firingValues.at(i));
+    if(rJoy->GetRawButtonPressed(i)) fireMotor.Set(firingValues.at(i)/5.0);
+}
+
+//Control over the arm
+void Robot::ControlArm(){
+
+  //Mandatory pause to allow for change in control
+  for(int i = 0; i<100; i++);
+
+  //Sets the mode over to Arcade Drive to still allow for maneuverability
+  typeOfDrive = true;
+  armEngage = true;
+
+  while(armEngage){
+    joystickArm = rJoy->GetY();
+    if(abs(joystickArm) < JOYSTICK_THRESH || currentDistance >= 100) joystickArm = 0;
+    else armMotor.Set(joystickArm/5.0);
+
+    //allows for another button press to revert everything back to normal
+    if(lJoy->GetRawButtonPressed(7)){for(int i = 0; i<100; i++); armEngage = false; typeOfDrive=false;}
+  }
 }
 
 void Robot::ArcDrv(){
