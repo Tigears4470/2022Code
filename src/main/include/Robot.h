@@ -54,11 +54,11 @@ class Robot : public frc::TimedRobot {
 
   // DriveTrain
   
-  rev::CANSparkMax frontLeft{1, rev::CANSparkMax::MotorType::kBrushed};
-  rev::CANSparkMax rearLeft{2, rev::CANSparkMax::MotorType::kBrushed};
+  rev::CANSparkMax frontLeft{1, rev::CANSparkMax::MotorType::kBrushless};
+  rev::CANSparkMax rearLeft{2, rev::CANSparkMax::MotorType::kBrushless};
 
-  rev::CANSparkMax frontRight{3, rev::CANSparkMax::MotorType::kBrushed};
-  rev::CANSparkMax rearRight{4, rev::CANSparkMax::MotorType::kBrushed};
+  rev::CANSparkMax frontRight{3, rev::CANSparkMax::MotorType::kBrushless};
+  rev::CANSparkMax rearRight{4, rev::CANSparkMax::MotorType::kBrushless};
 
 
   DifferentialDrive drive {frontLeft, frontRight};

@@ -70,7 +70,7 @@ void Robot::TeleopInit() {
   //links the back motors to the front motors in movement terms
   rearLeft.Follow(frontLeft);
   rearRight.Follow(frontRight);
-
+  currentDistance = 0;
   
 
   //frontRight.GetForwardLimitSwitch()
@@ -85,7 +85,7 @@ void Robot::TeleopInit() {
 void Robot::TeleopPeriodic() {
   if(typeOfDrive)ArcDrv();else TankDrv();
   if(lJoy->GetRawButtonPressed(11))typeOfDrive = !typeOfDrive;
-  FireButtons();
+  //FireButtons();
   if(lJoy->GetRawButtonPressed(7)) ControlArm();
 }
 
@@ -107,9 +107,12 @@ void Robot::ControlArm(){
 
   while(armEngage){
     joystickArm = rJoy->GetY();
-    if(abs(joystickArm) < JOYSTICK_THRESH || currentDistance >= 100) joystickArm = 0;
-    else armMotor.Set(joystickArm/5.0);
-
+    if(abs(joystickArm) > JOYSTICK_THRESH && currentDistance <= 100 && currentDistance >= 0){
+      armMotor.Set(joystickArm/5.0);
+      if(joystickArm > 0){currentDistance++;}
+      else if(joystickArm < 0){currentDistance--;}
+    } 
+    
     //allows for another button press to revert everything back to normal
     if(lJoy->GetRawButtonPressed(7)){for(int i = 0; i<100; i++); armEngage = false; typeOfDrive=false;}
   }
