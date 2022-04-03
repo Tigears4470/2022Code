@@ -8,15 +8,40 @@
 
 #include <frc/smartdashboard/SmartDashboard.h>
 
+
+
 static const int INVERT_LEFT = 1;
 static const int INVERT_RIGHT = 1;
-static const double JOYSTICK_THRESH = 0.05;
 
-void Robot::RobotInit() {
+// Makes the controller less sensitive to joystick
+
+
+//magical thread video
+static void VisionThread(){
+  cs::UsbCamera camera = frc::CameraServer::StartAutomaticCapture();
+  camera.SetResolution(640,480);
+  cs::CvSink cvSink = frc::CameraServer::GetVideo();
+  cs::CvSource outputStream = frc::CameraServer::PutVideo("CameraToUse",640,480);
+  cv::Mat mat;
+  while(true){
+    if(cvSink.GrabFrame(mat) == 0){
+      outputStream.NotifyError(cvSink.GetError());
+      continue;
+    }
+    outputStream.PutFrame(mat);
+  }
+}
+
+void Robot::RobotInit()
+{
   m_chooser.SetDefaultOption(kAutoNameDefault, kAutoNameDefault);
   m_chooser.AddOption(kAutoNameCustom, kAutoNameCustom);
   frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
+  std::thread visionThread(VisionThread);
+  visionThread.detach();
 }
+
+
 
 /**
  * This function is called every robot packet, no matter the mode. Use
@@ -39,109 +64,227 @@ void Robot::RobotPeriodic() {}
  * if-else structure below with additional strings. If using the SendableChooser
  * make sure to add them to the chooser code above as well.
  */
-void Robot::AutonomousInit() {
-  m_autoSelected = m_chooser.GetSelected();
-  // m_autoSelected = SmartDashboard::GetString("Auto Selector",
-  //     kAutoNameDefault);
-  fmt::print("Auto selected: {}\n", m_autoSelected);
+void Robot::AutonomousInit()
+{
+  
+  //m_autoSelected = m_chooser.GetSelected();
+  //m_autoSelected = SmartDashboard::GetString("Auto Selector", kAutoNameDefault);
+  // TODO: use output streams (<<)
+  //fmt::print("Auto selected: {}\n", m_autoSelected);
 
+  
   if (m_autoSelected == kAutoNameCustom) {
-    // Custom Auto goes here
+    //  Custom Auto goes here
   } else {
+    firstTimer.Reset();
+    firstTimer.Start();
     // Default Auto goes here
   }
 }
 
+// need to determine the distance to travel
+// Autonomous lasts 15 sec
+// tank ( neg, pos ) -> moves forwards
+// tank ( pos, neg ) -> moves backwards
 void Robot::AutonomousPeriodic() {
   if (m_autoSelected == kAutoNameCustom) {
     // Custom Auto goes here
   } else {
+    if (double(firstTimer.Get()) < 5) {
+      drive.TankDrive(0.5, -0.5);
+    } else {
+      drive.TankDrive(0.0, 0.0);
+    }
     // Default Auto goes here
   }
 }
 
-void Robot::TeleopInit() {
-  //forces the CANSparkMax motors to stop and await orders
+void Robot::TeleopInit(){
+  // forces the CANSparkMax motors to stop and await orders
   rearLeft.StopMotor();
   frontLeft.StopMotor();
   rearRight.StopMotor();
   frontRight.StopMotor();
 
-  //links the back motors to the front motors in movement terms
+  // links the back motors to the front motors in movement terms
   rearLeft.Follow(frontLeft);
   rearRight.Follow(frontRight);
-  currentDistance = 0;
+ 
+
+  // frontRight.GetForwardLimitSwitch()
+
+  // meant to set the values for the mapping of the firing mechanism
+  // firingValues.insert(pair<int, float>(2, 0.75));
+  // firingValues.insert(pair<int, float>(3, 1.00));
+  // firingValues.insert(pair<int, float>(4, 0.25));
+  // firingValues.insert(pair<int, float>(5, 0.50));
+
+  // sets the servo position to 0
+  // firstServo.Set(0);
+}
+
+void Robot::TeleopPeriodic(){
+  //shooting section of calls
+  if (typeOfDrive){ArcDrv();}
+  else{TankDrv();}
+  if (lJoy->GetRawButtonPressed(11)){typeOfDrive = !typeOfDrive;}
   
-
-  //frontRight.GetForwardLimitSwitch()
-
-  //meant to set he values for the mapping of the firing mechanism
-  firingValues.insert(pair<int, float>(2, 0.75));
-  firingValues.insert(pair<int, float>(3, 1.00));
-  firingValues.insert(pair<int, float>(4, 0.25));
-  firingValues.insert(pair<int, float>(5, 0.50));
+  //SmartDashboard::PutNumber("before Shooting", -1);
+  Shooting();
+  //SmartDashboard::PutNumber("before Control Arm", -2);
+  ControlArm();
+  //SmartDashboard::PutNumber("before CAM", -3);
+  CAM();
 }
 
-void Robot::TeleopPeriodic() {
-  if(typeOfDrive)ArcDrv();else TankDrv();
-  if(lJoy->GetRawButtonPressed(11))typeOfDrive = !typeOfDrive;
-  //FireButtons();
-  if(lJoy->GetRawButtonPressed(7)) ControlArm();
+//this should under understandable pretenses allow the turning motor for the arm
+//to be forced to go a set distance
+//90 was chosen as an arbitrary value for now as to determine limits of the motor
+void Robot::CAM(){
+  SmartDashboard::PutBoolean("ljoyGetRawButton 3", lJoy->GetRawButton(3));
+  if(rJoy->GetRawButton(4)) {
+    cam.Set(0.15);
+    currentDistance++;
+  }
+  else if(rJoy->GetRawButton(5)) {
+    cam.Set(-0.15);
+    currentDistance--;
+  }
+  else{
+    cam.Set(0.0);
+  }
 }
 
-//checks the buttons to see the rate of fire
+// checks to see if any of the firing buttons are pressed, and set the firing rate to its correseponding
+// --- To Scrap Later ---
 void Robot::FireButtons(){
-  for(int i = 2; i<=5; i++)
-    if(rJoy->GetRawButtonPressed(i)) fireMotor.Set(firingValues.at(i)/5.0);
+  //firstServo.Set(0);
+  // for (int i = 2; i <= 5; i++)
+  //   if (rJoy->GetRawButtonPressed(i))
+  //     fireMotor.Set(firingValues.at(i) / 5.0);
+  /*
+  if(rJoy->GetRawButtonPressed(2)){
+    fireMotor.Set(firingValues.at(2)/5.0);
+  }else if(rJoy->GetRawButtonPressed(3)){
+    fireMotor.Set(firingValues.at(3)/5.0);
+  }else if(rJoy->GetRawButtonPressed(4)){ 
+    fireMotor.Set(firingValues.at(4)/5.0);
+  }else if(rJoy->GetRawButtonPressed(5)){
+    fireMotor.Set(firingValues.at(5)/5.0);
+  }else{
+    fireMotor.Set(0);
+  }
+  */
 }
 
-//Control over the arm
+// START OF RANDOM CODE
+void Robot::Shooting(){
+  /*
+  if (lJoy->GetRawButton(2) && shooterCounter == 0){
+    firstServo.Set(1.0);
+    shooter.Set(-1);
+    shooterCounter++;
+  }
+  else{
+    firstServo.Set(0);
+    shooter.Set(0);
+    shooterCounter = 0;
+  }*/
+}
+// END OF RANDOM CODE
+
+// Control over the arm (for hanging I believe)
 void Robot::ControlArm(){
-
-  //Mandatory pause to allow for change in control
-  for(int i = 0; i<100; i++);
-
-  //Sets the mode over to Arcade Drive to still allow for maneuverability
-  typeOfDrive = true;
-  armEngage = true;
-
-  while(armEngage){
-    joystickArm = rJoy->GetY();
-    if(abs(joystickArm) > JOYSTICK_THRESH && currentDistance <= 100 && currentDistance >= 0){
-      armMotor.Set(joystickArm/5.0);
-      if(joystickArm > 0){currentDistance++;}
-      else if(joystickArm < 0){currentDistance--;}
-    } 
-    
-    //allows for another button press to revert everything back to normal
-    if(lJoy->GetRawButtonPressed(7)){for(int i = 0; i<100; i++); armEngage = false; typeOfDrive=false;}
+  SmartDashboard::PutBoolean("LimitSwitch", limitSwitchClimber.Get());
+  SmartDashboard::PutBoolean("rjoyGetRawButton 2", rJoy->GetRawButton(2));
+  // checks to see if the arm is too far either out or in
+  if (!limitSwitchClimber.Get()){
+    armMotor.StopMotor();
+    if (rJoy->GetRawButton(3)){
+      armMotor.Set(-0.2);
+    }
+  }
+  else{
+    // lets the driver give physical, analog input
+    if (rJoy->GetTrigger()){
+      joystickArm = rJoy->GetY();
+      if (abs(joystickArm) > JOYSTICK_THRESH){
+        armMotor.Set(joystickArm * 0.95 );
+      }
+    }
+    // meant to make the arm go forward
+    else if (rJoy->GetRawButton(2)){
+      armMotor.Set(0.60);
+    }
+    // meant to make the arm go backward
+    else if (rJoy->GetRawButton(3)){
+      armMotor.Set(-0.60);
+    }
+    // stops the arm from moving at all
+    else{
+      armMotor.Set(0);
+    }
   }
 }
 
 void Robot::ArcDrv(){
+  // Read the joystick for X and Y values
   joystickX = lJoy->GetX();
   joystickY = lJoy->GetY();
-  
-  if(abs(joystickX) < JOYSTICK_THRESH) joystickX = 0;
-  if(abs(joystickY) < JOYSTICK_THRESH) joystickY = 0;
 
-  drive.ArcadeDrive(-1*joystickX/1.5, joystickY/1.5); // Squared inputs true by default
+  SmartDashboard::PutNumber("joystick x inital 1:", 1);
+
+  // Stops the motors from moving if the joystick is too little or stops unintentional movements
+  if (abs(joystickX) < JOYSTICK_THRESH)
+    joystickX = 0;
+  if (abs(joystickY) < JOYSTICK_THRESH)
+    joystickY = 0;
+
+  
+  //calculation for weight ( determines level of linear ctrl vs radical ctrl )
+  //weight = (1/2)*(lJoy->GetThrottle())+0.5;
+
+  // equation to make this thing move faster forward and backwards
+  //joystickY = ((weight) * pow(joystickY, 1.8)) + ((1 - weight) * joystickY);
+  //joystickX = ((weight) * pow(joystickX, 1.8)) + ((1 - weight) * joystickX);
+
+  //SmartDashboard::PutNumber("jY", jY);
+  SmartDashboard::PutNumber("Joystick X", joystickX);
+  SmartDashboard::PutNumber("Joystick Y", joystickY);
+
+  drive.ArcadeDrive(joystickX, -1*joystickY); // Squared inputs true by default
+
+  SmartDashboard::PutNumber("AfterAdrive", 4);
 }
+
+
 void Robot::TankDrv(){
+  // reads from both joysticks for x and y
   joystickX = lJoy->GetY();
   joystickY = rJoy->GetY();
 
-  if(abs(joystickX) < JOYSTICK_THRESH) joystickX = 0;
-  if(abs(joystickY) < JOYSTICK_THRESH) joystickY = 0;
+  // Stops the motors from moving if the joystick is too little or stops unintentional movements
+  if (abs(joystickX) < JOYSTICK_THRESH)
+    joystickX = 0;
+  if (abs(joystickY) < JOYSTICK_THRESH)
+    joystickY = 0;
 
-  drive.TankDrive(joystickX/1.5, -1*joystickY/1.5); // Squared inputs true by default
+  // to reenable if Kirwan asks for it ( for what ever reason, if he needs it I guess? )
+  // calculation for weight ( determines level of linear ctrl vs radical ctrl )
+  //weight = lJoy->GetRawAxis(2);
+  //joystickY = (0.5 * pow(joystickY, 1.8)) + (0.5 * joystickY);
+  //joystickX = (0.5 * pow(joystickX, 1.8)) + (0.5 * joystickX);
+
+  drive.TankDrive(-1*joystickX/1.5, joystickY/1.5); // Squared inputs true by default
 }
 
-void Robot::DisabledInit() {
+void Robot::DisabledInit()
+{
   drive.StopMotor();
 }
 
-void Robot::DisabledPeriodic() {
+void Robot::DisabledPeriodic()
+{
   drive.StopMotor();
 }
 
@@ -150,7 +293,8 @@ void Robot::TestInit() {}
 void Robot::TestPeriodic() {}
 
 #ifndef RUNNING_FRC_TESTS
-int main() {
+int main()
+{
   return frc::StartRobot<Robot>();
 }
 #endif
